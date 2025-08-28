@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR Payment Scanner — Demo Only</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #111833;
+      --accent: #4aa3ff;
+      --accent-2: #22d3ee;
+      --text: #e7ecff;
+      --muted: #9fb0d9;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 20px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1400px 800px at 80% -10%, #1a2144 0%, #0b1020 60%, #050814 100%);
+      color: var(--text);
+      display: grid; place-items: center;
+    }
+
+    .app {
+      width: min(520px, 92vw);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      background: rgba(0,0,0,.35);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      position: relative;
+    }
+
+    .logo {
+      width: 34px; height: 34px; border-radius: 10px; flex: none;
+      background:
+        conic-gradient(from 0deg, var(--accent), var(--accent-2), var(--accent));
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
+    }
+    .brand { font-weight: 700; letter-spacing: .2px; }
+    .pill {
+      margin-left: auto; font-size: 12px; color: #0b1020; font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      padding: 6px 10px; border-radius: 999px;
+    }
+
+    .content { padding: 20px; }
+
+    .notice {
+      background: rgba(34, 197, 94, .1);
+      border: 1px dashed rgba(34, 197, 94, .6);
+      color: #d6ffec; font-size: 13px; line-height: 1.45;
+      border-radius: 14px; padding: 10px 12px; margin-bottom: 16px;
+    }
+
+    .scanner {
+      position: relative; aspect-ratio: 1 / 1; width: 100%; max-width: 420px;
+      margin: 0 auto; border-radius: 24px; overflow: hidden;
+      background:
+        radial-gradient(80% 50% at 50% 10%, rgba(255,255,255,.10), transparent 60%),
+        radial-gradient(100% 100% at 50% 130%, rgba(74,163,255,.12), transparent 55%),
+        #0b1126;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    /* QR frame */
+    .frame {
+      position: absolute; inset: 6% 6%; border-radius: 18px;
+      border: 2px dashed rgba(255,255,255,.23);
+      backdrop-filter: blur(1px);
+    }
+    .corner { position: absolute; width: 34px; height: 34px; border: 3px solid var(--accent); }
+    .corner.tl { left: -3px; top: -3px; border-right: none; border-bottom: none; border-radius: 14px 0 0 0; }
+    .corner.tr { right: -3px; top: -3px; border-left: none; border-bottom: none; border-radius: 0 14px 0 0; }
+    .corner.bl { left: -3px; bottom: -3px; border-right: none; border-top: none; border-radius: 0 0 0 14px; }
+    .corner.br { right: -3px; bottom: -3px; border-left: none; border-top: none; border-radius: 0 0 14px 0; }
+
+    /* Moving scan line */
+    .scan-line {
+      position: absolute; left: 6%; right: 6%; height: 2.5px; top: 10%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+      box-shadow: 0 0 16px rgba(74,163,255,.8), 0 0 28px rgba(34,211,238,.5);
+      animation: sweep 2.4s linear infinite;
+      opacity: .9;
+    }
+    @keyframes sweep {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(calc(88%)); }
+    }
+
+    /* Subtle grid background */
+    .grid {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+      background-size: 22px 22px;
+      mask-image: radial-gradient(80% 60% at 50% 50%, black 40%, transparent 100%);
+      opacity: .35;
+    }
+
+    .actions {
+      display: grid; gap: 12px; margin-top: 16px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    button {
+      appearance: none; border: none; cursor: pointer; font-weight: 700;
+      padding: 14px 16px; border-radius: 14px; font-size: 15px;
+      box-shadow: var(--shadow);
+      transition: transform .06s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+    .primary {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #0b1020;
+    }
+    .ghost {
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    button:active { transform: translateY(1px) scale(0.995); }
+
+    .status {
+      margin-top: 14px; font-size: 14px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; min-height: 22px;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%; background: var(--warning);
+      box-shadow: 0 0 10px var(--warning);
+    }
+    .dot.success { background: var(--success); box-shadow: 0 0 10px var(--success); }
+    .dot.error { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+    .watermark {
+      text-align: center; margin-top: 10px; font-size: 12px; color: var(--muted);
+      opacity: .8;
+    }
+    .watermark strong { color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="QR Payment Scanner Demo">
+    <div class="topbar">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="brand">Demo Pay</div>
+      <div class="pill" aria-label="Demo Mode">DEMO</div>
+    </div>
+
+    <div class="content">
+      <div class="notice" role="status">
+        This is a <strong>learning demo</strong>. It does not process real payments and is not affiliated with any brand.
+      </div>
+
+      <div class="scanner" id="scanner" aria-live="polite">
+        <div class="grid" aria-hidden="true"></div>
+        <div class="frame">
+          <span class="corner tl" aria-hidden="true"></span>
+          <span class="corner tr" aria-hidden="true"></span>
+          <span class="corner bl" aria-hidden="true"></span>
+          <span class="corner br" aria-hidden="true"></span>
+        </div>
+        <div class="scan-line" id="scanLine" aria-hidden="true"></div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="startBtn">Start Scan</button>
+        <button class="ghost" id="resetBtn" disabled>Reset</button>
+      </div>
+
+      <div class="status" id="status">
+        <span class="dot" id="dot"></span>
+        <span id="statusText">Ready to scan (demo).</span>
+      </div>
+
+      <div class="watermark">
+        For practice only — customize the styles/colors as you like.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tiny sound using Web Audio (no files needed)
+    function beep(duration = 140, frequency = 880, type = 'sine', volume = 0.05) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = type;
+        o.frequency.value = frequency;
+        g.gain.value = volume;
+        o.connect(g); g.connect(ctx.destination);
+        const now = ctx.currentTime;
+        o.start(now);
+        o.stop(now + duration / 1000);
+        // fade out
+        g.gain.exponentialRampToValueAtTime(0.0001, now + duration / 1000);
+      } catch (e) {
+        // ignore if blocked by autoplay policies until user gesture
+      }
+    }
+
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusEl = document.getElementById('statusText');
+    const dotEl = document.getElementById('dot');
+    const scanLine = document.getElementById('scanLine');
+
+    let scanning = false;
+    let timer = null;
+
+    function setStateIdle() {
+      scanning = false;
+      startBtn.disabled = false;
+      resetBtn.disabled = true;
+      statusEl.textContent = 'Ready to scan (demo).';
+      dotEl.className = 'dot';
+      scanLine.style.animationPlayState = 'paused';
+    }
+
+    function setStateScanning() {
+      scanning = true;
+      startBtn.disabled = true;
+      resetBtn.disabled = false;
+      statusEl.textContent = 'Scanning…';
+      dotEl.className = 'dot';
+      scanLine.style.animationPlayState = 'running';
+    }
+
+    function setStateSuccess() {
+      scanning = false;
+      startBtn.disabled = true;
+      resetBtn.disabled = false;
+      statusEl.textContent = 'Payment verified (DEMO).';
+      dotEl.className = 'dot success';
+      scanLine.style.animationPlayState = 'paused';
+    }
+
+    function setStateError() {
+      scanning = false;
+      startBtn.disabled = false;
+      resetBtn.disabled = false;
+      statusEl.textContent = 'Scan failed (DEMO).';
+      dotEl.className = 'dot error';
+      scanLine.style.animationPlayState = 'paused';
+    }
+
+    startBtn.addEventListener('click', () => {
+      if (scanning) return;
+      setStateScanning();
+      beep(120, 1200, 'triangle', 0.06); // short start beep
+
+      // Fake scan processing time (2.2s), then success.
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        // 90% success, 10% error (for demo)
+        if (Math.random() < 0.9) {
+          beep(160, 1600, 'sine', 0.07);
+          setStateSuccess();
+        } else {
+          beep(280, 320, 'sawtooth', 0.05);
+          setStateError();
+        }
+      }, 2200);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      clearTimeout(timer);
+      beep(90, 600, 'sine', 0.04);
+      setStateIdle();
+    });
+
+    // Pause scan-line animation until user starts (better on some browsers)
+    scanLine.style.animationPlayState = 'paused';
+    // Initialize
+    setStateIdle();
+  </script>
+</body>
+</html>
